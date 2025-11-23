@@ -1,24 +1,31 @@
-// backend/server.js
 const express = require('express');
 const { MongoClient, ObjectId } = require('mongodb');
 const path = require('path');
 const cors = require('cors');
 
 const app = express();
+
+// Render assigns a dynamic port via environment variable
 const PORT = process.env.PORT || 3000;
 
-// Enable CORS (optional, helps with local dev)
+// Enable CORS (optional, useful for development)
 app.use(cors());
 
-// Parse JSON bodies for POST/PUT requests
+// Parse JSON bodies
 app.use(express.json());
 
-// Serve images from coursework/images
-app.use('/images', express.static(path.join(__dirname, '../images')));
+// Logger middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} ${req.method} ${req.url}`);
+  next();
+});
 
-// Serve index.html at the root route
+// Serve static images from coursework/images
+app.use('/images', express.static(path.join(__dirname, '../coursework/images')));
+
+// Serve index.html
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../index.html'));
+  res.sendFile(path.join(__dirname, '../coursework/index.html'));
 });
 
 // MongoDB connection
@@ -36,13 +43,8 @@ async function start() {
 
     // GET all lessons
     app.get('/lessons', async (req, res) => {
-      try {
-        const data = await lessons.find({}).toArray();
-        res.json(data);
-      } catch (err) {
-        console.error("Error fetching lessons:", err);
-        res.status(500).json({ error: "Internal server error" });
-      }
+      const data = await lessons.find({}).toArray();
+      res.json(data);
     });
 
     // POST a new order
@@ -53,26 +55,21 @@ async function start() {
         return res.status(400).json({ error: "Missing order fields" });
       }
 
-      try {
-        const order = { name, phone, lessonIDs, spaces };
-        const result = await orders.insertOne(order);
+      const order = { name, phone, lessonIDs, spaces };
+      const result = await orders.insertOne(order);
 
-        // Update lesson spaces
-        for (let i = 0; i < lessonIDs.length; i++) {
-          await lessons.updateOne(
-            { _id: new ObjectId(lessonIDs[i]) },
-            { $inc: { spaces: -spaces[i] } }
-          );
-        }
-
-        res.status(201).json({ message: "Order submitted", orderId: result.insertedId });
-      } catch (err) {
-        console.error("Error submitting order:", err);
-        res.status(500).json({ error: "Internal server error" });
+      // Update lesson spaces
+      for (let i = 0; i < lessonIDs.length; i++) {
+        await lessons.updateOne(
+          { _id: new ObjectId(lessonIDs[i]) },
+          { $inc: { spaces: -spaces[i] } }
+        );
       }
+
+      res.status(201).json({ message: "Order submitted", orderId: result.insertedId });
     });
 
-    // PUT: update lesson attributes
+    // PUT update lesson attributes
     app.put('/lessons/:id', async (req, res) => {
       const { id } = req.params;
       const updateData = req.body;
@@ -81,21 +78,16 @@ async function start() {
         return res.status(400).json({ error: "No data provided for update" });
       }
 
-      try {
-        await lessons.updateOne(
-          { _id: new ObjectId(id) },
-          { $set: updateData }
-        );
-        res.json({ message: "Lesson updated" });
-      } catch (err) {
-        console.error("Error updating lesson:", err);
-        res.status(500).json({ error: "Internal server error" });
-      }
+      await lessons.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: updateData }
+      );
+
+      res.json({ message: "Lesson updated" });
     });
 
-    // Start the server
     app.listen(PORT, () => {
-      console.log(`🚀 Server running at http://localhost:${PORT} or Render port`);
+      console.log(`🚀 Server running at http://localhost:${PORT}`);
     });
 
   } catch (err) {
@@ -103,5 +95,4 @@ async function start() {
   }
 }
 
-// Start everything
 start();
