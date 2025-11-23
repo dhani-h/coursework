@@ -3,8 +3,8 @@
 <head>
   <title>After School Lessons</title>
 
-  <!-- Vue 2 -->
-  <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
+  <!-- Vue 2.7.1 -->
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.7.1/dist/vue.min.js"></script>
 
   <!-- Bootstrap 5 CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -13,31 +13,11 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
   <style>
-    body {
-      background: #f4f6f9;
-      padding-top: 20px;
-    }
-
-    .lesson-card {
-      transition: 0.3s;
-      border-radius: 12px;
-    }
-
-    .lesson-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    }
-
-    .cart-box {
-      border-radius: 12px;
-      padding: 20px;
-    }
-
-    .checkout-btn {
-      width: 100%;
-      font-size: 1.2rem;
-      font-weight: bold;
-    }
+    body { background: #f4f6f9; padding-top: 20px; }
+    .lesson-card { transition: 0.3s; border-radius: 12px; }
+    .lesson-card:hover { transform: translateY(-4px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    .cart-box { border-radius: 12px; padding: 20px; }
+    .checkout-btn { width: 100%; font-size: 1.2rem; font-weight: bold; }
   </style>
 </head>
 
@@ -48,8 +28,6 @@
   <!-- HEADER -->
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="fw-bold">After School Lessons</h1>
-
-    <!-- Cart toggle button: disabled if cart is empty -->
     <button class="btn btn-primary" @click="showLessons = !showLessons" :disabled="cart.length === 0 && !showLessons">
       <i :class="showLessons ? 'fa fa-shopping-cart' : 'fa fa-book'"></i>
       {{ showLessons ? 'View Cart' : 'View Lessons' }}
@@ -59,12 +37,9 @@
   <!-- SEARCH + SORT CONTROLS -->
   <div class="row mb-4" v-if="showLessons">
     <div class="col-md-4 mb-2">
-      <!-- Search input bound to searchTerm; filters lessons as you type -->
       <input class="form-control form-control-lg" v-model="searchTerm" placeholder="Search lessons...">
     </div>
-
     <div class="col-md-3 mb-2">
-      <!-- Sort key select -->
       <select class="form-select form-select-lg" v-model="sortKey">
         <option disabled value="">Sort by...</option>
         <option value="subject">Subject</option>
@@ -73,9 +48,7 @@
         <option value="spaces">Spaces</option>
       </select>
     </div>
-
     <div class="col-md-3 mb-2">
-      <!-- Sort order select -->
       <select class="form-select form-select-lg" v-model="sortOrder">
         <option value="asc">Ascending</option>
         <option value="desc">Descending</option>
@@ -84,9 +57,8 @@
   </div>
 
   <!-- LESSON GRID -->
-<!-- LESSON GRID -->
 <div v-if="showLessons" class="row">
-  <div class="col-md-4 col-lg-3 mb-4" v-for="lesson in filteredLessons" :key="lesson.id">
+  <div class="col-md-4 col-lg-3 mb-4" v-for="lesson in filteredLessons" :key="lesson._id">
     <div class="card lesson-card shadow-sm p-3">
 
       <!-- Lesson image -->
@@ -95,11 +67,12 @@
            alt="Lesson Image" 
            style="height:180px; object-fit:cover; border-radius:8px;">
 
-      <!-- Optional Font Awesome icon below image -->
+      <!-- Font Awesome icon -->
       <div class="text-center mb-3">
-        <i :class="lesson.icon" class="fa-2x"></i>
+        <i :class="[lesson.icon, 'fa-2x']"></i>
       </div>
 
+      <!-- Lesson details -->
       <h4 class="fw-bold">{{ lesson.subject }}</h4>
       <p class="mb-1"><strong>Location:</strong> {{ lesson.location }}</p>
       <p class="mb-1"><strong>Price:</strong> £{{ lesson.price }}</p>
@@ -116,47 +89,33 @@
   </div>
 </div>
 
+
   <!-- CART PAGE -->
   <div v-else class="cart-box bg-white shadow-sm">
-
     <h2 class="fw-bold mb-3">Your Cart</h2>
-
-    <!-- Show message if cart is empty -->
     <div v-if="cart.length === 0" class="alert alert-info">
       Your cart is empty.
     </div>
-
-    <!-- List of lessons in cart -->
     <ul class="list-group mb-3" v-else>
       <li class="list-group-item d-flex justify-content-between align-items-center"
-          v-for="(item, index) in cart" :key="index">
-
+          v-for="(item, index) in cart" :key="item._id">
         <div>
           <strong>{{ item.subject }}</strong>
           <span class="text-muted"> – £{{ item.price }}</span>
         </div>
-
-        <!-- Remove button restores the space in lesson -->
         <button class="btn btn-sm btn-danger" @click="removeFromCart(index)">
           <i class="fa fa-trash"></i>
         </button>
       </li>
     </ul>
-
-    <!-- Total price -->
     <h4 class="text-end mb-3">
       Total: <strong>£{{ totalPrice }}</strong>
     </h4>
 
-    <!-- Checkout form -->
     <div class="card p-3 mb-3">
       <h5 class="fw-bold">Checkout</h5>
-
-      <!-- Name & Phone input fields -->
       <input class="form-control mb-2" v-model="order.name" placeholder="Your Name">
       <input class="form-control mb-3" v-model="order.phone" placeholder="Phone Number">
-
-      <!-- Checkout button: enabled only if name & phone valid -->
       <button class="btn btn-primary checkout-btn"
               :disabled="!validCheckout"
               @click="submitOrder">
@@ -164,40 +123,30 @@
       </button>
     </div>
 
-    <!-- Success message -->
     <div v-if="orderSubmitted" class="alert alert-success">
       Order successfully submitted!
     </div>
-
   </div>
+
 </div>
 
-<!-- LOAD lessons.js -->
-<script src="lessons.js"></script>
-
-<!-- VUE APP -->
 <script>
 new Vue({
   el: "#app",
-
   data: {
-    lessons: lessons,        // Loaded from lessons.js
-    showLessons: true,       // Toggle between lessons and cart
-    searchTerm: "",          // User input for search
-    sortKey: "",             // Sort by this attribute
-    sortOrder: "asc",        // Sort order
-    cart: [],                // Array of selected lessons
-    orderSubmitted: false,   // Show success message
-    order: { name: "", phone: "" } // Checkout inputs
+    lessons: [],          // Fetched from backend
+    showLessons: true,
+    searchTerm: "",
+    sortKey: "",
+    sortOrder: "asc",
+    cart: [],
+    orderSubmitted: false,
+    order: { name: "", phone: "" }
   },
 
   computed: {
-
-    // Filtered & sorted lessons for display
     filteredLessons() {
       let term = this.searchTerm.toLowerCase();
-
-      // Filter by subject, location, price, spaces
       let list = this.lessons.filter(l =>
         l.subject.toLowerCase().includes(term) ||
         l.location.toLowerCase().includes(term) ||
@@ -205,32 +154,19 @@ new Vue({
         l.spaces.toString().includes(term)
       );
 
-      // Sort if sortKey is selected
       if (this.sortKey) {
         list.sort((a, b) => {
           let A = a[this.sortKey];
           let B = b[this.sortKey];
-
-          // Handle number vs string sorting
-          if (typeof A === "number" && typeof B === "number") {
-            return this.sortOrder === "asc" ? A - B : B - A;
-          } else {
-            return this.sortOrder === "asc"
-              ? (A.toString().localeCompare(B.toString()))
-              : (B.toString().localeCompare(A.toString()));
-          }
+          if (typeof A === "number" && typeof B === "number") return this.sortOrder === "asc" ? A - B : B - A;
+          return this.sortOrder === "asc" ? A.toString().localeCompare(B.toString()) : B.toString().localeCompare(A.toString());
         });
       }
-
       return list;
     },
 
-    // Total price of cart
-    totalPrice() {
-      return this.cart.reduce((sum, l) => sum + l.price, 0);
-    },
+    totalPrice() { return this.cart.reduce((sum, l) => sum + l.price, 0); },
 
-    // Validation for checkout
     validCheckout() {
       const nameOk = /^[A-Za-z\s]+$/.test(this.order.name.trim());
       const phoneOk = /^[0-9]+$/.test(this.order.phone.trim());
@@ -239,8 +175,15 @@ new Vue({
   },
 
   methods: {
+    async fetchLessons() {
+      try {
+        const res = await fetch('http://localhost:3000/lessons');
+        this.lessons = await res.json();
+      } catch (err) {
+        console.error("Error fetching lessons:", err);
+      }
+    },
 
-    // Add lesson to cart, decrease spaces
     addToCart(lesson) {
       if (lesson.spaces > 0) {
         lesson.spaces--;
@@ -248,20 +191,38 @@ new Vue({
       }
     },
 
-    // Remove lesson from cart, restore spaces
     removeFromCart(index) {
       this.cart[index].spaces++;
       this.cart.splice(index, 1);
     },
 
-    // Submit order: show success message and reset cart
-    submitOrder() {
+    async submitOrder() {
       if (!this.validCheckout) return;
 
-      this.orderSubmitted = true;
-      this.cart = [];
-      this.order = { name: "", phone: "" };
+      const lessonIDs = this.cart.map(l => l._id);
+      const spaces = this.cart.map(() => 1);
+
+      try {
+        await fetch('http://localhost:3000/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: this.order.name, phone: this.order.phone, lessonIDs, spaces })
+        });
+
+        this.orderSubmitted = true;
+        this.cart = [];
+        this.order = { name: "", phone: "" };
+
+        // Refresh lessons to update spaces
+        this.fetchLessons();
+      } catch (err) {
+        console.error("Error submitting order:", err);
+      }
     }
+  },
+
+  mounted() {
+    this.fetchLessons();
   }
 });
 </script>
