@@ -1,104 +1,91 @@
-require('dotenv').config();
-console.log("Loaded MONGO_URI:", process.env.MONGO_URI);
-
+const path = require('path');
 const express = require('express');
-const cors = require('cors');
 const { MongoClient, ObjectId } = require('mongodb');
+const cors = require('cors');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = 3000;
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 
-// MongoDB connection
-const client = new MongoClient(process.env.MONGO_URI);
+// Logger middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} ${req.method} ${req.url}`);
+  next();
+});
 
-let lessonsCollection;
-let ordersCollection;
+// Serve images
+app.use('/images', express.static(path.join(__dirname, '../images')));
 
-async function startServer() {
+// Serve index.html
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../index.html'));
+});
+
+// MongoDB setup
+const uri = "mongodb+srv://dhanishta:dhanishta@cluster0.egzooh2.mongodb.net/school?retryWrites=true&w=majority";
+const client = new MongoClient(uri);
+
+async function start() {
   try {
     await client.connect();
-    console.log('✅ Connected to MongoDB Atlas');
+    console.log("Connected to MongoDB");
 
-    const db = client.db('school'); // Database name
-    lessonsCollection = db.collection('lessons');
-    ordersCollection = db.collection('orders');
+    const db = client.db("school");
+    const lessons = db.collection("lessons");
+    const orders = db.collection("orders");
 
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running at http://localhost:${PORT}`);
-    });
-  } catch (err) {
-    console.error('MongoDB connection error:', err);
-  }
-}
-startServer();
-
-/////////////////////////////////////
-// ROUTES
-/////////////////////////////////////
-
-// GET all lessons
-app.get('/lessons', async (req, res) => {
-  try {
-    const lessons = await lessonsCollection.find({}).toArray();
-    res.json(lessons);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// SEARCH lessons
-app.get('/search', async (req, res) => {
-  const q = req.query.q?.toLowerCase() || '';
-  try {
-    const lessons = await lessonsCollection.find({}).toArray();
-    const filtered = lessons.filter(l =>
-      l.subject.toLowerCase().includes(q) ||
-      l.location.toLowerCase().includes(q) ||
-      l.price.toString().includes(q) ||
-      l.spaces.toString().includes(q)
-    );
-    res.json(filtered);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// POST orders
-app.post('/orders', async (req, res) => {
-  const { name, phone, items } = req.body;
-
-  if (!name || !phone || !Array.isArray(items) || items.length === 0) {
-    return res.status(400).json({ error: 'Invalid order data' });
-  }
-
-  try {
-    // Save order
-    const orderResult = await ordersCollection.insertOne({
-      name,
-      phone,
-      items,
-      createdAt: new Date(),
+    // GET all lessons
+    app.get('/lessons', async (req, res) => {
+      const data = await lessons.find({}).toArray();
+      res.json(data);
     });
 
-    // Update lesson spaces
-    for (const item of items) {
-      const lesson = await lessonsCollection.findOne({ _id: ObjectId(item.lessonId) });
-      if (lesson) {
-        const newSpaces = lesson.spaces - item.qty;
-        await lessonsCollection.updateOne(
-          { _id: ObjectId(item.lessonId) },
-          { $set: { spaces: newSpaces >= 0 ? newSpaces : 0 } }
+    // POST a new order
+    app.post('/orders', async (req, res) => {
+      const { name, phone, lessonIDs, spaces } = req.body;
+      if (!name || !phone || !lessonIDs || !spaces) {
+        return res.status(400).json({ error: "Missing order fields" });
+      }
+
+      const order = { name, phone, lessonIDs, spaces };
+      const result = await orders.insertOne(order);
+
+      for (let i = 0; i < lessonIDs.length; i++) {
+        await lessons.updateOne(
+          { _id: new ObjectId(lessonIDs[i]) },
+          { $inc: { spaces: -spaces[i] } }
         );
       }
-    }
 
-    res.json({ message: 'Order placed successfully', orderId: orderResult.insertedId });
+      res.status(201).json({ message: "Order submitted", orderId: result.insertedId });
+    });
+
+    // PUT update lesson attributes
+    app.put('/lessons/:id', async (req, res) => {
+      const { id } = req.params;
+      const updateData = req.body;
+
+      if (!updateData || Object.keys(updateData).length === 0) {
+        return res.status(400).json({ error: "No data provided for update" });
+      }
+
+      await lessons.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: updateData }
+      );
+
+      res.json({ message: "Lesson updated" });
+    });
+
+    app.listen(PORT, () => {
+      console.log(`Server running at http://localhost:${PORT}`);
+    });
+
   } catch (err) {
-    console.error('Order error:', err);
-    res.status(500).json({ error: err.message });
+    console.error("MongoDB connection error:", err);
   }
-});
+}
+
+start();
