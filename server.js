@@ -1,18 +1,24 @@
-// backend/server.js
 const express = require('express');
 const { MongoClient, ObjectId } = require('mongodb');
 const path = require('path');
+const cors = require('cors');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Parse JSON bodies
+// Middleware
+app.use(cors());
 app.use(express.json());
 
-// Serve static files (index.html + images folder)
-app.use(express.static(path.join(__dirname, '..')));
+// Serve static images directly
+app.use(express.static(path.join(__dirname, '../images')));
 
-// MongoDB connection
+// Serve index.html
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../index.html'));
+});
+
+// MongoDB setup
 const uri = "mongodb+srv://dhanishta:dhanishta@cluster0.egzooh2.mongodb.net/school?retryWrites=true&w=majority";
 const client = new MongoClient(uri);
 
@@ -31,16 +37,17 @@ async function start() {
       res.json(data);
     });
 
-    // POST a new order
+    // POST new order
     app.post('/orders', async (req, res) => {
       const { name, phone, lessonIDs, spaces } = req.body;
       if (!name || !phone || !lessonIDs || !spaces) {
         return res.status(400).json({ error: "Missing order fields" });
       }
 
-      await orders.insertOne({ name, phone, lessonIDs, spaces });
+      const order = { name, phone, lessonIDs, spaces };
+      const result = await orders.insertOne(order);
 
-      // Update spaces for each lesson
+      // Update lesson spaces
       for (let i = 0; i < lessonIDs.length; i++) {
         await lessons.updateOne(
           { _id: new ObjectId(lessonIDs[i]) },
@@ -48,15 +55,17 @@ async function start() {
         );
       }
 
-      res.status(201).json({ message: "Order submitted" });
+      res.status(201).json({ message: "Order submitted", orderId: result.insertedId });
     });
 
-    // Catch-all route for frontend
+    // Catch-all for SPA routing (optional)
     app.get('*', (req, res) => {
       res.sendFile(path.join(__dirname, '../index.html'));
     });
 
-    app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+    // Start server
+    app.listen(PORT, () => console.log(`🚀 Server running at http://localhost:${PORT}`));
+
   } catch (err) {
     console.error("MongoDB connection error:", err);
   }
