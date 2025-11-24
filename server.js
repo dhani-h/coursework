@@ -19,8 +19,8 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve static images directly (no /images needed in frontend)
-app.use(express.static(path.join(__dirname, '../images')));
+// Serve frontend and images
+app.use(express.static(path.join(__dirname, '../'))); // serves index.html + images
 
 // MongoDB connection
 const uri = "mongodb+srv://dhanishta:dhanishta@cluster0.egzooh2.mongodb.net/school?retryWrites=true&w=majority";
