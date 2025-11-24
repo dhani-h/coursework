@@ -7,19 +7,22 @@ const cors = require('cors');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Enable CORS
+// Enable CORS (optional)
 app.use(cors());
 
 // Parse JSON bodies
 app.use(express.json());
 
-// Serve index.html and other static files
-app.use(express.static(path.join(__dirname, '../')));
+// Logger
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} ${req.method} ${req.url}`);
+  next();
+});
 
-// Serve images directly from /images folder
+// Serve static images directly (no /images needed in frontend)
 app.use(express.static(path.join(__dirname, '../images')));
 
-// MongoDB setup
+// MongoDB connection
 const uri = "mongodb+srv://dhanishta:dhanishta@cluster0.egzooh2.mongodb.net/school?retryWrites=true&w=majority";
 const client = new MongoClient(uri);
 
@@ -41,6 +44,7 @@ async function start() {
     // POST a new order
     app.post('/orders', async (req, res) => {
       const { name, phone, lessonIDs, spaces } = req.body;
+
       if (!name || !phone || !lessonIDs || !spaces) {
         return res.status(400).json({ error: "Missing order fields" });
       }
@@ -59,19 +63,13 @@ async function start() {
       res.status(201).json({ message: "Order submitted", orderId: result.insertedId });
     });
 
-    // Serve index.html for root route and frontend routing
-    app.get('/', (req, res) => {
+    // Catch-all frontend route for Vue SPA
+    app.get(/.*/, (req, res) => {
       res.sendFile(path.join(__dirname, '../index.html'));
     });
 
-    // Catch-all route for any unknown frontend route
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(__dirname, '../index.html'));
-    });
-
-    // Start server
     app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`🚀 Server running at http://localhost:${PORT}`);
     });
 
   } catch (err) {
