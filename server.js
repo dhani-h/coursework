@@ -1,28 +1,19 @@
 // backend/server.js
 const express = require('express');
 const { MongoClient, ObjectId } = require('mongodb');
-const path = require('path');
 const cors = require('cors');
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Enable CORS for frontend fetches from GitHub Pages
+// Enable CORS for frontend hosted elsewhere
 app.use(cors());
-
-// Parse JSON bodies
 app.use(express.json());
 
-// Logger middleware
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} ${req.method} ${req.url}`);
-  next();
-});
-
-// Serve images from "images" folder (at root of project)
+// Serve images folder
 app.use('/images', express.static(path.join(__dirname, '../images')));
 
-// MongoDB connection
 const uri = "mongodb+srv://dhanishta:dhanishta@cluster0.egzooh2.mongodb.net/school?retryWrites=true&w=majority";
 const client = new MongoClient(uri);
 
@@ -41,17 +32,21 @@ async function start() {
       res.json(data);
     });
 
-    // POST a new order
+    // GET all orders
+    app.get('/orders', async (req, res) => {
+      const data = await orders.find({}).toArray();
+      res.json(data);
+    });
+
+    // POST new order
     app.post('/orders', async (req, res) => {
       const { name, phone, lessonIDs, spaces } = req.body;
       if (!name || !phone || !lessonIDs || !spaces) {
-        return res.status(400).json({ error: "Missing order fields" });
+        return res.status(400).json({ error: "Missing fields" });
       }
 
-      const order = { name, phone, lessonIDs, spaces };
-      const result = await orders.insertOne(order);
+      await orders.insertOne({ name, phone, lessonIDs, spaces });
 
-      // Update the lesson spaces
       for (let i = 0; i < lessonIDs.length; i++) {
         await lessons.updateOne(
           { _id: new ObjectId(lessonIDs[i]) },
@@ -59,22 +54,12 @@ async function start() {
         );
       }
 
-      res.status(201).json({ message: "Order submitted", orderId: result.insertedId });
+      res.status(201).json({ message: "Order submitted" });
     });
 
-    // GET all orders
-    app.get('/orders', async (req, res) => {
-      const data = await orders.find({}).toArray();
-      res.json(data);
-    });
-
-    // Start server
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running at http://localhost:${PORT} (or on Render port)`);
-    });
-
+    app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
   } catch (err) {
-    console.error("MongoDB connection error:", err);
+    console.error(err);
   }
 }
 
