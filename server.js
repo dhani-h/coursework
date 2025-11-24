@@ -1,3 +1,4 @@
+// backend/server.js
 const express = require('express');
 const { MongoClient, ObjectId } = require('mongodb');
 const path = require('path');
@@ -6,17 +7,17 @@ const cors = require('cors');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
+// Enable CORS
 app.use(cors());
+
+// Parse JSON bodies
 app.use(express.json());
 
-// Serve static images directly
-app.use(express.static(path.join(__dirname, '../images')));
+// Serve index.html and other static files
+app.use(express.static(path.join(__dirname, '../')));
 
-// Serve index.html
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../index.html'));
-});
+// Serve images directly from /images folder
+app.use(express.static(path.join(__dirname, '../images')));
 
 // MongoDB setup
 const uri = "mongodb+srv://dhanishta:dhanishta@cluster0.egzooh2.mongodb.net/school?retryWrites=true&w=majority";
@@ -37,7 +38,7 @@ async function start() {
       res.json(data);
     });
 
-    // POST new order
+    // POST a new order
     app.post('/orders', async (req, res) => {
       const { name, phone, lessonIDs, spaces } = req.body;
       if (!name || !phone || !lessonIDs || !spaces) {
@@ -58,13 +59,20 @@ async function start() {
       res.status(201).json({ message: "Order submitted", orderId: result.insertedId });
     });
 
-    // Catch-all for SPA routing (optional)
+    // Serve index.html for root route and frontend routing
+    app.get('/', (req, res) => {
+      res.sendFile(path.join(__dirname, '../index.html'));
+    });
+
+    // Catch-all route for any unknown frontend route
     app.get('*', (req, res) => {
       res.sendFile(path.join(__dirname, '../index.html'));
     });
 
     // Start server
-    app.listen(PORT, () => console.log(`🚀 Server running at http://localhost:${PORT}`));
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+    });
 
   } catch (err) {
     console.error("MongoDB connection error:", err);
