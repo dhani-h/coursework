@@ -1,14 +1,13 @@
+// backend/server.js
 const express = require('express');
 const { MongoClient, ObjectId } = require('mongodb');
 const path = require('path');
 const cors = require('cors');
 
 const app = express();
-
-// Render assigns a dynamic port via environment variable
 const PORT = process.env.PORT || 3000;
 
-// Enable CORS (optional, useful for development)
+// Enable CORS for local testing (optional)
 app.use(cors());
 
 // Parse JSON bodies
@@ -20,13 +19,8 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve static images from coursework/images
-app.use('/images', express.static(path.join(__dirname, '../coursework/images')));
-
-// Serve index.html
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../coursework/index.html'));
-});
+// Serve static files (images, CSS, JS) from the project root
+app.use(express.static(path.join(__dirname, '..')));
 
 // MongoDB connection
 const uri = "mongodb+srv://dhanishta:dhanishta@cluster0.egzooh2.mongodb.net/school?retryWrites=true&w=majority";
@@ -69,21 +63,14 @@ async function start() {
       res.status(201).json({ message: "Order submitted", orderId: result.insertedId });
     });
 
-    // PUT update lesson attributes
-    app.put('/lessons/:id', async (req, res) => {
-      const { id } = req.params;
-      const updateData = req.body;
+    // Serve index.html for front page
+    app.get('/', (req, res) => {
+      res.sendFile(path.join(__dirname, '../index.html'));
+    });
 
-      if (!updateData || Object.keys(updateData).length === 0) {
-        return res.status(400).json({ error: "No data provided for update" });
-      }
-
-      await lessons.updateOne(
-        { _id: new ObjectId(id) },
-        { $set: updateData }
-      );
-
-      res.json({ message: "Lesson updated" });
+    // Catch-all to support frontend routing (optional)
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(__dirname, '../index.html'));
     });
 
     app.listen(PORT, () => {
