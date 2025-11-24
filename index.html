@@ -20,11 +20,16 @@
     .checkout-btn { width: 100%; font-size: 1.2rem; font-weight: bold; }
   </style>
 </head>
-
 <body class="p-4">
+
+<script>
+  // Base URL for backend (Render)
+  const serverBaseUrl = "https://coursework-akzj.onrender.com";
+</script>
+
 <div id="app" class="container">
 
-  <!-- Header -->
+  <!-- HEADER -->
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="fw-bold">After School Lessons</h1>
     <button class="btn btn-primary" @click="showLessons = !showLessons" :disabled="cart.length === 0 && !showLessons">
@@ -33,7 +38,7 @@
     </button>
   </div>
 
-  <!-- Search & Sort -->
+  <!-- SEARCH + SORT -->
   <div class="row mb-4" v-if="showLessons">
     <div class="col-md-4 mb-2">
       <input class="form-control form-control-lg" v-model="searchTerm" placeholder="Search lessons...">
@@ -55,21 +60,25 @@
     </div>
   </div>
 
-  <!-- Lesson Grid -->
+  <!-- LESSON GRID -->
   <div v-if="showLessons" class="row">
     <div class="col-md-4 col-lg-3 mb-4" v-for="lesson in filteredLessons" :key="lesson._id">
       <div class="card lesson-card shadow-sm p-3">
-        <img :src="`${serverBaseUrl}/images/${lesson.image}`" 
-             class="card-img-top mb-3" 
-             alt="Lesson Image" 
+
+        <img :src="`${serverBaseUrl}/images/${lesson.image}`"
+             class="card-img-top mb-3"
+             alt="Lesson Image"
              style="height:180px; object-fit:cover; border-radius:8px;">
+
         <div class="text-center mb-3">
           <i :class="[lesson.icon, 'fa-2x']"></i>
         </div>
+
         <h4 class="fw-bold">{{ lesson.subject }}</h4>
         <p class="mb-1"><strong>Location:</strong> {{ lesson.location }}</p>
         <p class="mb-1"><strong>Price:</strong> £{{ lesson.price }}</p>
         <p class="mb-2"><strong>Spaces left:</strong> {{ lesson.spaces }}</p>
+
         <button class="btn btn-success w-100"
                 @click="addToCart(lesson)"
                 :disabled="lesson.spaces === 0">
@@ -79,18 +88,25 @@
     </div>
   </div>
 
-  <!-- Cart -->
+  <!-- CART PAGE -->
   <div v-else class="cart-box bg-white shadow-sm">
     <h2 class="fw-bold mb-3">Your Cart</h2>
     <div v-if="cart.length === 0" class="alert alert-info">Your cart is empty.</div>
+
     <ul class="list-group mb-3" v-else>
       <li class="list-group-item d-flex justify-content-between align-items-center"
           v-for="(item, index) in cart" :key="item._id">
-        <div><strong>{{ item.subject }}</strong> <span class="text-muted"> – £{{ item.price }}</span></div>
-        <button class="btn btn-sm btn-danger" @click="removeFromCart(index)"><i class="fa fa-trash"></i></button>
+        <div>
+          <strong>{{ item.subject }}</strong> – £{{ item.price }}
+        </div>
+        <button class="btn btn-sm btn-danger" @click="removeFromCart(index)">
+          <i class="fa fa-trash"></i>
+        </button>
       </li>
     </ul>
+
     <h4 class="text-end mb-3">Total: <strong>£{{ totalPrice }}</strong></h4>
+
     <div class="card p-3 mb-3">
       <h5 class="fw-bold">Checkout</h5>
       <input class="form-control mb-2" v-model="order.name" placeholder="Your Name">
@@ -101,14 +117,15 @@
         <i class="fa fa-check"></i> Submit Order
       </button>
     </div>
-    <div v-if="orderSubmitted" class="alert alert-success">Order successfully submitted!</div>
+
+    <div v-if="orderSubmitted" class="alert alert-success">
+      Order successfully submitted!
+    </div>
   </div>
 
 </div>
 
 <script>
-const serverBaseUrl = "https://coursework-akzj.onrender.com";
-
 new Vue({
   el: "#app",
   data: {
@@ -131,19 +148,19 @@ new Vue({
         l.spaces.toString().includes(term)
       );
       if (this.sortKey) {
-        list.sort((a, b) => {
+        list.sort((a,b) => {
           let A = a[this.sortKey], B = b[this.sortKey];
-          if (typeof A === "number" && typeof B === "number") return this.sortOrder === "asc" ? A - B : B - A;
-          return this.sortOrder === "asc" ? A.toString().localeCompare(B.toString()) : B.toString().localeCompare(A.toString());
+          if(typeof A==='number' && typeof B==='number') return this.sortOrder==='asc'?A-B:B-A;
+          return this.sortOrder==='asc'?A.toString().localeCompare(B.toString()):B.toString().localeCompare(A.toString());
         });
       }
       return list;
     },
-    totalPrice() { return this.cart.reduce((sum, l) => sum + l.price, 0); },
+    totalPrice() { return this.cart.reduce((sum,l)=>sum+l.price,0); },
     validCheckout() {
       const nameOk = /^[A-Za-z\s]+$/.test(this.order.name.trim());
       const phoneOk = /^[0-9]+$/.test(this.order.phone.trim());
-      return nameOk && phoneOk && this.cart.length > 0;
+      return nameOk && phoneOk && this.cart.length>0;
     }
   },
   methods: {
@@ -151,32 +168,35 @@ new Vue({
       try {
         const res = await fetch(`${serverBaseUrl}/lessons`);
         this.lessons = await res.json();
-      } catch (err) { console.error("Error fetching lessons:", err); }
+      } catch (err) {
+        console.error("Error fetching lessons:", err);
+      }
     },
     addToCart(lesson) {
-      if (lesson.spaces > 0) { lesson.spaces--; this.cart.push(lesson); }
+      if(lesson.spaces>0){ lesson.spaces--; this.cart.push(lesson); }
     },
-    removeFromCart(index) {
-      this.cart[index].spaces++; this.cart.splice(index, 1);
+    removeFromCart(index){
+      this.cart[index].spaces++;
+      this.cart.splice(index,1);
     },
     async submitOrder() {
-      if (!this.validCheckout) return;
-      const lessonIDs = this.cart.map(l => l._id);
-      const spaces = this.cart.map(() => 1);
-      try {
-        await fetch(`${serverBaseUrl}/orders`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: this.order.name, phone: this.order.phone, lessonIDs, spaces })
+      if(!this.validCheckout) return;
+      const lessonIDs = this.cart.map(l=>l._id);
+      const spaces = this.cart.map(()=>1);
+      try{
+        await fetch(`${serverBaseUrl}/orders`,{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({name:this.order.name, phone:this.order.phone, lessonIDs, spaces})
         });
-        this.orderSubmitted = true;
-        this.cart = [];
-        this.order = { name: "", phone: "" };
+        this.orderSubmitted=true;
+        this.cart=[];
+        this.order={name:"", phone:""};
         this.fetchLessons();
-      } catch (err) { console.error("Error submitting order:", err); }
+      }catch(err){console.error("Error submitting order:", err);}
     }
   },
-  mounted() { this.fetchLessons(); }
+  mounted(){ this.fetchLessons(); }
 });
 </script>
 

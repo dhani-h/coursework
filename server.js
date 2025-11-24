@@ -7,17 +7,19 @@ const cors = require('cors');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Enable CORS so GitHub Pages can fetch data
+// Enable CORS for frontend fetches from GitHub Pages
 app.use(cors());
+
+// Parse JSON bodies
 app.use(express.json());
 
-// Logger
+// Logger middleware
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} ${req.method} ${req.url}`);
   next();
 });
 
-// Serve images from backend
+// Serve images from "images" folder (at root of project)
 app.use('/images', express.static(path.join(__dirname, '../images')));
 
 // MongoDB connection
@@ -33,21 +35,23 @@ async function start() {
     const lessons = db.collection("lessons");
     const orders = db.collection("orders");
 
-    // GET lessons
+    // GET all lessons
     app.get('/lessons', async (req, res) => {
       const data = await lessons.find({}).toArray();
       res.json(data);
     });
 
-    // POST orders
+    // POST a new order
     app.post('/orders', async (req, res) => {
       const { name, phone, lessonIDs, spaces } = req.body;
-      if (!name || !phone || !lessonIDs || !spaces)
+      if (!name || !phone || !lessonIDs || !spaces) {
         return res.status(400).json({ error: "Missing order fields" });
+      }
 
       const order = { name, phone, lessonIDs, spaces };
       const result = await orders.insertOne(order);
 
+      // Update the lesson spaces
       for (let i = 0; i < lessonIDs.length; i++) {
         await lessons.updateOne(
           { _id: new ObjectId(lessonIDs[i]) },
@@ -58,11 +62,16 @@ async function start() {
       res.status(201).json({ message: "Order submitted", orderId: result.insertedId });
     });
 
-    // Optional: health check
-    app.get('/', (req, res) => res.send('Backend running'));
+    // GET all orders
+    app.get('/orders', async (req, res) => {
+      const data = await orders.find({}).toArray();
+      res.json(data);
+    });
 
     // Start server
-    app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running at http://localhost:${PORT} (or on Render port)`);
+    });
 
   } catch (err) {
     console.error("MongoDB connection error:", err);
